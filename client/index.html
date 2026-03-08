@@ -12,9 +12,10 @@
 <button onclick="joinRoom()">Join Room</button>
 
 <br><br>
+<div id="audioStatus" style="margin-top: 10px;">Audio: Checking...</div>
+<video id="localVideo" autoplay playsinline muted></video>
 
-<video id="localVideo" autoplay muted playsinline width="300"></video>
-<video id="remoteVideo" autoplay playsinline  width="300"></video>
+<video id="remoteVideo" autoplay playsinline></video>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="script.js"></script>
