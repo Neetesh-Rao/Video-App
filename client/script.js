@@ -58,9 +58,7 @@ async function startCamera() {
     }
 
   }
-
 }
-
 async function joinRoom() {
   const roomId = roomInput.value;
   
