@@ -1,6 +1,17 @@
-// const socket = io("http://192.168.1.123:5000");
+const socket = io("http://192.168.1.123:5000");
 // const socket = io('https://cw6wsg7n-5000.inc1.devtunnels.ms/')  
-const socket = io();
+// const socket = io();
+window.addEventListener("load", async () => {
+  const savedRoom = localStorage.getItem("roomId");
+
+  if (savedRoom) {
+    roomInput.value = savedRoom;
+
+    await startCamera();
+
+    socket.emit("join-room", savedRoom);
+  }
+});
 
 let localStream;
 let peerConnections={};
@@ -20,6 +31,26 @@ const servers = {
     }
   ]
 };
+function leaveRoom(){
+
+  // Remove saved room
+  localStorage.removeItem("roomId");
+
+  // Close all peer connections
+  Object.values(peerConnections).forEach(pc => pc.close());
+
+  peerConnections = {};
+
+  // Clear remote videos
+  document.getElementById("videos").innerHTML =
+      '<video id="localVideo" autoplay playsinline muted></video>';
+
+  // Disconnect socket
+  socket.disconnect();
+
+  // Reload page
+  location.reload();
+}
 
 async function startCamera() {
 
@@ -61,70 +92,23 @@ async function startCamera() {
 }
 async function joinRoom() {
   const roomId = roomInput.value;
-  
+
   if (!roomId) {
     alert("Enter room id");
     return;
   }
-  
+
+  // Save room in localStorage
+  localStorage.setItem("roomId", roomId);
+
   await startCamera();
-  
-  // Only emit join-room if we have stream
+
   if (localStream) {
     socket.emit("join-room", roomId);
-  } else {
-    alert("Camera not available");
   }
 }
 
-// function createPeerConnection(roomId) {
-//   peerConnection = new RTCPeerConnection(servers);
-  
-//   // Add all tracks from local stream
-//   if (localStream) {
-//     localStream.getTracks().forEach(track => {
-//       peerConnection.addTrack(track, localStream);
-//     });
-//   }
-  
-//   peerConnection.ontrack = event => {
-//     if (!remoteVideo.srcObject) {
-//       remoteVideo.srcObject = event.streams[0];
-//     }
-//   };
-  
-//   peerConnection.onicecandidate = event => {
-//     if (event.candidate) {
-//       socket.emit("ice-candidate", {
-//         room: roomId,
-//         candidate: event.candidate
-//       });
-//     }
-//   };
-// }
-// function createPeerConnection(socketId){
-//   const pc= new RTCPeerConnection(servers);
-//   localStream.getTracks().forEach(track => {
-// pc.addTrack(track,localStream);    
-//   });
-//   pc.ontrack=event=>{
-//     const video=document.createElement("video");
-//     video.srcObject=event.streams[0];
-//     video.autoplay=true;
-//     video.playsInline=true;
-//    document.getElementById("videos").appendChild(video);
-//   };
-//   pc.onicecandidate=event=>{
-//     if(event.candidate){
-//       socket.emit("ice-candidate",{
-//         to:socketId,
-//         candidate:event.candidate
-//       })
-//     }
-//   }
-//   peerConnections[socketId]=pc;
-//   return pc;
-// }
+
 function createPeerConnection(socketId){
   // If a peer connection already exists for this socket, return it
   if (peerConnections[socketId]) return peerConnections[socketId];
@@ -196,4 +180,16 @@ socket.on("ice-candidate", async (data) => {
   if (pc) {
     await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
   }
+});
+
+socket.on("user-left", (socketId) => {
+
+  const video = document.getElementById(`video-${socketId}`);
+  if(video) video.remove();
+
+  if(peerConnections[socketId]){
+    peerConnections[socketId].close();
+    delete peerConnections[socketId];
+  }
+
 });
