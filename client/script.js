@@ -69,9 +69,8 @@ async function joinRoom() {
   
   await startCamera();
   
-  // Only create peer connection if we have stream
+  // Only emit join-room if we have stream
   if (localStream) {
-    createPeerConnection(roomId);
     socket.emit("join-room", roomId);
   } else {
     alert("Camera not available");
@@ -103,30 +102,65 @@ async function joinRoom() {
 //     }
 //   };
 // }
+// function createPeerConnection(socketId){
+//   const pc= new RTCPeerConnection(servers);
+//   localStream.getTracks().forEach(track => {
+// pc.addTrack(track,localStream);    
+//   });
+//   pc.ontrack=event=>{
+//     const video=document.createElement("video");
+//     video.srcObject=event.streams[0];
+//     video.autoplay=true;
+//     video.playsInline=true;
+//    document.getElementById("videos").appendChild(video);
+//   };
+//   pc.onicecandidate=event=>{
+//     if(event.candidate){
+//       socket.emit("ice-candidate",{
+//         to:socketId,
+//         candidate:event.candidate
+//       })
+//     }
+//   }
+//   peerConnections[socketId]=pc;
+//   return pc;
+// }
 function createPeerConnection(socketId){
-  const pc= new RTCPeerConnection(servers);
+  // If a peer connection already exists for this socket, return it
+  if (peerConnections[socketId]) return peerConnections[socketId];
+
+  const pc = new RTCPeerConnection(servers);
+
+  // Add local tracks
   localStream.getTracks().forEach(track => {
-pc.addTrack(track,localStream);    
+    pc.addTrack(track, localStream);    
   });
-  pc.ontrack=event=>{
-    const video=document.createElement("video");
-    video.srcObject=event.streams[0];
-    video.autoplay=true;
-    video.playsInline=true;
-   document.getElementById("videos").appendChild(video);
+
+  pc.ontrack = event => {
+    // Only create video element if it doesn't exist
+    let existingVideo = document.getElementById(`video-${socketId}`);
+    if (!existingVideo) {
+      const video = document.createElement("video");
+      video.id = `video-${socketId}`; // unique id per user
+      video.srcObject = event.streams[0];
+      video.autoplay = true;
+      video.playsInline = true;
+      document.getElementById("videos").appendChild(video);
+    }
   };
-  pc.onicecandidate=event=>{
+
+  pc.onicecandidate = event => {
     if(event.candidate){
       socket.emit("ice-candidate",{
-        to:socketId,
-        candidate:event.candidate
-      })
+        to: socketId,
+        candidate: event.candidate
+      });
     }
-  }
-  peerConnections[socketId]=pc;
+  };
+
+  peerConnections[socketId] = pc;
   return pc;
 }
-
 
 socket.on("user-joined", async (socketId) => {
   const pc=createPeerConnection(socketId);
