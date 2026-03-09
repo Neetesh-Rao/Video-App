@@ -1,6 +1,6 @@
-const socket = io("http://192.168.1.123:5000");
+// const socket = io("http://192.168.1.123:5000");
 // const socket = io('https://cw6wsg7n-5000.inc1.devtunnels.ms/')  
-// const socket = io();
+const socket = io();
 window.addEventListener("load", async () => {
   const savedRoom = localStorage.getItem("roomId");
 
